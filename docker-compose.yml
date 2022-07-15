@@ -1,0 +1,88 @@
+version: '3.8'
+services:
+
+    #Laravel App
+    app:
+        container_name: app
+        build:
+            args:
+                group: www-data
+                user: www-data
+            context: .
+            dockerfile: docker/php/v8/Dockerfile-fpm
+        restart: unless-stopped
+        tty: true
+        environment:
+            SERVICE_NAME: app
+            SERVICE_TAGS: dev
+        working_dir: /var/www
+        volumes:
+            - ./:/var/www
+        networks:
+            - lar_9-network
+
+    #Nginx Service
+    nginx:
+        container_name: lar_9_nginx
+        build:
+            context: .
+            dockerfile: docker/nginx/Dockerfile
+        restart: unless-stopped
+        tty: true
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ./:/var/www
+        networks:
+            - lar_9-network
+
+    #Node Service
+    npm:
+        container_name: npm_app
+        image: node:14
+        ports:
+            - "3000:3000"
+            - "3001:3001"
+        working_dir: /var/www
+        entrypoint: ['npm']
+        volumes:
+            - ./:/var/www
+        networks:
+            - lar_9-network
+
+    #DB Service
+    mariadb:
+        container_name: lar_9_mysql
+        image: mariadb:10.6
+        restart: unless-stopped
+        ports:
+            - "3306:3306"
+        tty: true
+        environment:
+            MYSQL_DATABASE: blogs
+            MYSQL_ROOT_PASSWORD: okt
+            MYSQL_USER: admin
+            MYSQL_PASSWORD: secret
+        networks:
+            - lar_9-network
+
+    #Phpmyadmin Service
+    phpmyadmin:
+        container_name: lar_9_phpmyadmin
+        image: phpmyadmin
+        restart: unless-stopped
+        ports:
+            - "8080:80"
+        environment:
+            - PMA_ARBITRARY=1
+            - PMA_HOST=mariadb
+        depends_on:
+            - mariadb
+        networks:
+            - lar_9-network
+
+#Docker Networks
+networks:
+    lar_9-network:
+        driver: bridge
